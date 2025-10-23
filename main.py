@@ -7,7 +7,7 @@ class image_editor_app:
     def __init__ (self, root):
         self.root = root
         self.root.title("Image Editor")
-        self.root.geometry("600x900")
+        self.root.geometry("1200x900")
 
         self.current_image = None
         self.photo = None
@@ -27,14 +27,30 @@ class image_editor_app:
         open_button = tk.Button(top_frame, text="Open Image", command=self.open_image)
         open_button.pack(side=tk.LEFT, padx=10)
 
+        # Create frame for main area
+        main_frame = tk.Frame(self.root)
+        main_frame.pack(pady=10, fill=tk.BOTH, expand=True)
+
         # Create canvas for image display
-        self.canvas = tk.Canvas(self.root, width=700, height=500, bg="gray")
-        self.canvas.pack(fill=tk.BOTH, expand=True, pady=10)
+        self.canvas = tk.Canvas(main_frame, width=700, height=500, bg="gray")
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, padx=10)
+
+        # Create edit frame
+        edit_frame = tk.Frame(main_frame, bg = "lightblue", width=400)
+        edit_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10)
+
+        # Add editor title
+        edit_title = tk.Label(edit_frame, text="Edit Tools", font=("Arial", 16, "bold"), bg="lightblue", fg="black")
+        edit_title.pack(padx=10)
 
         # create info box
         self.info_text = tk.Label(self.root, text="No image loaded.", font=("Arial", 10), fg="black", justify=tk.LEFT, bg="lightgray", padx=10, pady=10)
         self.info_text.pack(fill=tk.X, padx=20, pady=10)
         
+        # Rotate Section
+        rotate_title = tk.Label(edit_frame, text="Rotate Image", font=("Arial", 14, "bold"), bg="lightblue", fg="black")
+        rotate_title.pack(padx=10, pady=5)
+
         # Bind window resize event
         self.root.bind('<Configure>', self.on_window_resize)
 
