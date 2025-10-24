@@ -47,9 +47,35 @@ class image_editor_app:
         self.info_text = tk.Label(self.root, text="No image loaded.", font=("Arial", 10), fg="black", justify=tk.LEFT, bg="lightgray", padx=10, pady=10)
         self.info_text.pack(fill=tk.X, padx=20, pady=10)
         
-        # Rotate Section
+        # Rotate Title
         rotate_title = tk.Label(edit_frame, text="Rotate Image", font=("Arial", 14, "bold"), bg="lightblue", fg="black")
         rotate_title.pack(padx=10, pady=5)
+
+        # Create rotate frame
+        rotate_frame = tk.Frame(edit_frame, bg="lightblue")
+        rotate_frame.pack(padx=10, pady=5)
+
+        # Create rotate buttons
+        rotate_left_button = tk.Button(rotate_frame, text="Rotate Left", highlightbackground="lightblue", font=("Arial", 10), command=self.rotate_left)
+        rotate_left_button.pack(padx=10, pady=5, side=tk.LEFT)
+
+        rotate_right_button = tk.Button(rotate_frame, text="Rotate Right", highlightbackground="lightblue", font=("Arial", 10), command=self.rotate_right)
+        rotate_right_button.pack(padx=10, pady=5, side=tk.LEFT)
+
+        # Flip Title
+        flip_title = tk.Label(edit_frame, text="Invert Image", font=("Arial", 14, "bold"), bg="lightblue", fg="black")
+        flip_title.pack(padx=10, pady=5)
+
+        # Create flip frame
+        flip_frame = tk.Frame(edit_frame, bg="lightblue")
+        flip_frame.pack(padx=10, pady=5)
+
+        # Create flip buttons
+        flip_vertical_button = tk.Button(flip_frame, text="Flip Vertical", highlightbackground="lightblue", font=("Arial", 10), command=self.flip_vertical)
+        flip_vertical_button.pack(padx=10, pady=5, side=tk.LEFT)
+
+        flip_horizontal_button = tk.Button(flip_frame, text="Flip Horizontal", highlightbackground="lightblue", font=("Arial", 10), command=self.flip_horizontal)
+        flip_horizontal_button.pack(padx=10, pady=5, side=tk.LEFT)
 
         # Bind window resize event
         self.root.bind('<Configure>', self.on_window_resize)
@@ -118,8 +144,29 @@ class image_editor_app:
             self.root.after_cancel(self._after_id) if hasattr(self, '_after_id') else None
             self._after_id = self.root.after(100, self.display_image)
 
+    def rotate_left(self):
+        if self.current_image:
+            self.current_image = self.current_image.rotate(90, expand=True)
+            self.display_image()
+            self.display_info("Rotated Left")
 
+    def rotate_right(self):
+        if self.current_image:
+            self.current_image = self.current_image.rotate(-90, expand=True)
+            self.display_image()
+            self.display_info("Rotated Right")
 
+    def flip_vertical(self):
+        if self.current_image:
+            self.current_image = self.current_image.transpose(Image.FLIP_TOP_BOTTOM)
+            self.display_image()
+            self.display_info("Flipped Vertically")
+
+    def flip_horizontal(self):
+        if self.current_image:
+            self.current_image = self.current_image.transpose(Image.FLIP_LEFT_RIGHT)
+            self.display_image()
+            self.display_info("Flipped Horizontally")
 
 if __name__ == "__main__":
     root = tk.Tk()
