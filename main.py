@@ -10,7 +10,10 @@ class image_editor_app:
         self.root.geometry("1200x900")
 
         self.current_image = None
+        self.original_image = None  # Store the original image
         self.photo = None
+        self.scale_percent = 100  # Track the scale percentage
+        self.transformations = []  # List to store transformation history
 
         self.create_widgets()
 
@@ -77,6 +80,15 @@ class image_editor_app:
         flip_horizontal_button = tk.Button(flip_frame, text="Flip Horizontal", highlightbackground="lightblue", font=("Arial", 10), command=self.flip_horizontal)
         flip_horizontal_button.pack(padx=10, pady=5, side=tk.LEFT)
 
+        # Resize title
+        resize_title = tk.Label(edit_frame, text="Resize Image", font=("Arial", 14, "bold"), bg="lightblue", fg="black")
+        resize_title.pack(padx=10, pady=5)
+
+        # Create resize slider
+        self.resize_slider = tk.Scale(edit_frame, from_=10, to=200, orient=tk.HORIZONTAL, label="Resize (%)", bg="white", command=self.resize_image)
+        self.resize_slider.set(100)
+        self.resize_slider.pack(padx=10, pady=5)
+
         # Bind window resize event
         self.root.bind('<Configure>', self.on_window_resize)
 
@@ -90,13 +102,17 @@ class image_editor_app:
         ])
         if file_path:
             try:
-                self.current_image = Image.open(file_path)
-                self.display_image(self.current_image)
+                self.original_image = Image.open(file_path)  # Store the original
+                self.current_image = self.original_image.copy()  # Work with a copy
+                self.scale_percent = 100  # Reset scale to 100%
+                self.resize_slider.set(100)  # Reset slider to 100%
+                self.transformations = []  # Reset transformations
+                self.display_image()
                 self.display_info(file_path)
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to open image: {e}")
 
-    def display_image(self, image=None):
+    def display_image(self):
         if self.current_image:
             # Get the canvas dimensions
             canvas_width = self.canvas.winfo_width()
@@ -107,24 +123,15 @@ class image_editor_app:
                 canvas_width = self.canvas.winfo_width()
                 canvas_height = self.canvas.winfo_height()
             
-            # Get the image dimensions
-            img_width, img_height = self.current_image.size
-            
-            # Calculate the scaling factor to fit the image within the canvas
-            width_ratio = canvas_width / img_width
-            height_ratio = canvas_height / img_height
-            scale_factor = min(width_ratio, height_ratio)
-            
-            # Calculate new dimensions
-            new_width = int(img_width * scale_factor)
-            new_height = int(img_height * scale_factor)
-            
-            # Resize the image while maintaining aspect ratio
-            resized_image = self.current_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            
-            self.photo = ImageTk.PhotoImage(resized_image)
+            # Create PhotoImage directly from current_image without any additional resizing
+            self.photo = ImageTk.PhotoImage(self.current_image)
             self.canvas.delete("all")
-            self.canvas.create_image(canvas_width/2, canvas_height/2, image=self.photo, anchor=tk.CENTER)
+            
+            # Center the image in the canvas
+            x = canvas_width / 2
+            y = canvas_height / 2
+            
+            self.canvas.create_image(x, y, image=self.photo, anchor=tk.CENTER)
 
     def display_info(self, file_path):
         file_name = os.path.basename(file_path)
@@ -146,27 +153,58 @@ class image_editor_app:
 
     def rotate_left(self):
         if self.current_image:
-            self.current_image = self.current_image.rotate(90, expand=True)
-            self.display_image()
+            self.transformations.append(('rotate', 90))
+            self.apply_transformations()
             self.display_info("Rotated Left")
 
     def rotate_right(self):
         if self.current_image:
-            self.current_image = self.current_image.rotate(-90, expand=True)
-            self.display_image()
+            self.transformations.append(('rotate', -90))
+            self.apply_transformations()
             self.display_info("Rotated Right")
 
     def flip_vertical(self):
         if self.current_image:
-            self.current_image = self.current_image.transpose(Image.FLIP_TOP_BOTTOM)
-            self.display_image()
+            self.transformations.append(('flip_v', None))
+            self.apply_transformations()
             self.display_info("Flipped Vertically")
 
     def flip_horizontal(self):
         if self.current_image:
-            self.current_image = self.current_image.transpose(Image.FLIP_LEFT_RIGHT)
-            self.display_image()
+            self.transformations.append(('flip_h', None))
+            self.apply_transformations()
             self.display_info("Flipped Horizontally")
+
+    def apply_transformations(self):
+        if self.original_image:
+            # Start with a fresh copy of the original image
+            img = self.original_image.copy()
+            print(self.transformations)
+            
+            # First apply the resize
+            if self.scale_percent != 100:
+                width = int(img.width * self.scale_percent / 100)
+                height = int(img.height * self.scale_percent / 100)
+                img = img.resize((width, height), Image.Resampling.LANCZOS)
+            
+            # Then apply all other transformations in order
+            for transform_type, value in self.transformations:
+                if transform_type == 'rotate':
+                    img = img.rotate(value, expand=True)
+                elif transform_type == 'flip_v':
+                    img = img.transpose(Image.FLIP_TOP_BOTTOM)
+                elif transform_type == 'flip_h':
+                    img = img.transpose(Image.FLIP_LEFT_RIGHT)
+            
+            self.current_image = img
+            self.display_image()
+
+    def resize_image(self, value):
+        if self.original_image:
+            self.scale_percent = int(value)
+            self.apply_transformations()
+            self.display_info(f"Resized to {self.scale_percent}%")
+
 
 if __name__ == "__main__":
     root = tk.Tk()
