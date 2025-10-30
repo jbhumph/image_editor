@@ -17,6 +17,13 @@ class image_editor_app:
 
         self.create_widgets()
 
+        # Crop variables
+        self.crop_mode = False
+        self.crop_start_x = None
+        self.crop_start_y = None
+        self.crop_rect = None
+        self.crop_dimensions = None
+
     def create_widgets(self):
         # Create top frame
         top_frame = tk.Frame(self.root)
@@ -88,6 +95,14 @@ class image_editor_app:
         self.resize_slider = tk.Scale(edit_frame, from_=10, to=200, orient=tk.HORIZONTAL, label="Resize (%)", bg="white", command=self.resize_image)
         self.resize_slider.set(100)
         self.resize_slider.pack(padx=10, pady=5)
+
+        # Crop Title
+        crop_title = tk.Label(edit_frame, text="Crop Image", font=("Arial", 14, "bold"), bg="lightblue", fg="black")
+        crop_title.pack(padx=10, pady=5)
+
+        # Create crop frame
+        crop_button = tk.Button(edit_frame, text="Crop Image", highlightbackground="lightblue", font=("Arial", 10), command=self.crop_image)
+        crop_button.pack(padx=10, pady=5)
 
         # Bind window resize event
         self.root.bind('<Configure>', self.on_window_resize)
@@ -181,11 +196,6 @@ class image_editor_app:
             img = self.original_image.copy()
             print(self.transformations)
             
-            # First apply the resize
-            if self.scale_percent != 100:
-                width = int(img.width * self.scale_percent / 100)
-                height = int(img.height * self.scale_percent / 100)
-                img = img.resize((width, height), Image.Resampling.LANCZOS)
             
             # Then apply all other transformations in order
             for transform_type, value in self.transformations:
@@ -195,6 +205,14 @@ class image_editor_app:
                     img = img.transpose(Image.FLIP_TOP_BOTTOM)
                 elif transform_type == 'flip_h':
                     img = img.transpose(Image.FLIP_LEFT_RIGHT)
+                elif transform_type == 'crop':
+                    img = img.crop(value)
+
+            # First apply the resize
+            if self.scale_percent != 100:
+                width = int(img.width * self.scale_percent / 100)
+                height = int(img.height * self.scale_percent / 100)
+                img = img.resize((width, height), Image.Resampling.LANCZOS)
             
             self.current_image = img
             self.display_image()
@@ -205,6 +223,57 @@ class image_editor_app:
             self.apply_transformations()
             self.display_info(f"Resized to {self.scale_percent}%")
 
+    def crop_image(self):
+        if self.current_image:
+            if not self.crop_mode:
+                self.crop_mode = True
+                self.canvas.bind("<ButtonPress-1>", self.start_crop)
+                self.canvas.bind("<B1-Motion>", self.update_crop)
+                self.canvas.bind("<ButtonRelease-1>", self.finish_crop)
+                messagebox.showinfo("Crop Mode", "Crop mode activated. Click and drag on the image to select crop area.")
+            else:
+                self.crop_mode = False
+                self.canvas.unbind("<ButtonPress-1>")
+                self.canvas.unbind("<B1-Motion>")
+                self.canvas.unbind("<ButtonRelease-1>")
+                if self.crop_rect:
+                    self.canvas.delete(self.crop_rect)
+                    self.crop_rect = None
+                messagebox.showinfo("Crop Mode", "Crop mode deactivated.")
+
+    def start_crop(self, event):
+        if self.crop_mode:
+            self.crop_start_x = event.x
+            self.crop_start_y = event.y
+            if self.crop_rect:
+                self.canvas.delete(self.crop_rect)
+                self.crop_rect = None
+
+    def update_crop(self, event):
+        if self.crop_mode and self.crop_start_x is not None and self.crop_start_y is not None:
+            if self.crop_rect:
+                self.canvas.delete(self.crop_rect)
+            self.crop_rect = self.canvas.create_rectangle(self.crop_start_x, self.crop_start_y, event.x, event.y, outline="red", dash=(2, 2))
+
+    def finish_crop(self, event):
+        if self.crop_mode and self.crop_start_x is not None and self.crop_start_y is not None:
+            left = min(self.crop_start_x, event.x)
+            top = min(self.crop_start_y, event.y)
+            right = max(self.crop_start_x, event.x)
+            bottom = max(self.crop_start_y, event.y)
+
+            self.transformations.append(('crop', [left, top, right, bottom]))
+            self.apply_transformations()
+            
+            self.canvas.delete(self.crop_rect)
+            self.crop_rect = None
+            self.crop_mode = False
+            self.canvas.unbind("<ButtonPress-1>")
+            self.canvas.unbind("<B1-Motion>")
+            self.canvas.unbind("<ButtonRelease-1>")
+            self.crop_start_x = None
+            self.crop_start_y = None
+            messagebox.showinfo("Crop Mode", "Crop mode deactivated.")
 
 if __name__ == "__main__":
     root = tk.Tk()
